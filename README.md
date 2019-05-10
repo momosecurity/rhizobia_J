@@ -1,16 +1,15 @@
-# 简介：
-```
-java安全sdk旨在封装针对java代码的安全防护的方法，用于协助java开发人员解决常见的java代码相关的安全漏洞， 提高java开发人员的开发效率、保障业务安全的同时，又不影响业务的正常功能、最小化影响性能。
-目前第一版包括了SQL注入防护、xss防护、url重定向防护、SSRF防护、CSRF防护、readObject反序列化漏洞防护、xxe防护、AES加解密、RSA加解密
-```
-#### 如有疑问，请联系。
+### 项目简介
+本项目包含两部分：
+[java安全编码规范](https://github.com/momosecurity/rhizobia_J/wiki/JAVA%E5%AE%89%E5%85%A8%E7%BC%96%E7%A0%81%E8%A7%84%E8%8C%83
+)和JAVA安全SDK，SDK介绍详见下述。
+
 
 ### 项目结构
 ```
+├── LICENSE
 ├── README.md
 ├── pom.xml
 └── src
-    ├── LICENSE
     ├── main
     │   ├── java
     │   │   └── com
@@ -113,7 +112,7 @@ java安全sdk旨在封装针对java代码的安全防护的方法，用于协助
 ```
 
 #### b、引入java security library:
-在target目录中找到target/common-utils-1.0-SNAPSHOT.jar，导入工程中
+在target目录中找到target/rhizobia_J-1.0.jar，导入工程中
 
 > 需要在自己的maven工程pom.xml中加入如下依赖
 ```
