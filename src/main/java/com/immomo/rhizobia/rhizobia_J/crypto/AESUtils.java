@@ -24,8 +24,13 @@ import javax.crypto.spec.SecretKeySpec;
  * @program: java安全编码实践
  *
  * @description: AES 加解密方法
- *               oracle官方已经在如下版本去除了aes-256的限制，6u181，7u171，8u161，9 b148，openjdk7u
- *               https://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8170157
+ *
+ * 知识点1：oracle官方已经在如下版本去除了aes-256的限制，6u181，7u171，8u161，9 b148，openjdk7u
+ *             https://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8170157
+ *
+ * 知识点2：之所以没有用base64或16进制处理加密后的内容，是因为在使用base64编码后的内容中，可能存在'+'字符，
+ *             '+'字符返回给前端后再返回给后端时，如果不经过处理，会变为' '空格字符，
+ *             所以在对加密内容进行base64编码时，请注意'+'字符
  *
  * @author: V0ld1ron
  *
@@ -93,7 +98,6 @@ public class AESUtils {
      */
     public byte[] encrypt(String sSrc) throws Exception {
         byte[] raw = aesKey.getBytes();
-        System.out.println();
         SecretKeySpec skeySpec = new SecretKeySpec(raw, "AES");
         Cipher cipher = Cipher.getInstance(aesMode);
         IvParameterSpec iv = new IvParameterSpec(iVector.getBytes());

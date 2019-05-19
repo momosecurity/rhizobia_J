@@ -371,6 +371,17 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
 ```
 
 <h3 id="aes">9、AES加解密</h3>
+
+```
+知识点1：oracle官方已经在如下版本去除了aes-256的限制，6u181，7u171，8u161，9 b148，openjdk7u
+                 https://bugs.java.com/bugdatabase/view_bug.do?bug_id=JDK-8170157
+ 
+知识点2：之所以AES、RSA没有封装base64或16进制编码处理，是因为在使用base64编码后的内容中，可能存在'+'字符，
+              '+'字符返回给前端后再返回给后端时，如果不经过处理，会变为' '空格字符，
+               所以请用户自行选择base64编码或16进制编码
+               并在对加密内容进行base64编码时，请注意'+'字符
+```
+
 #### a、调用AESUtils:
 
 ```Java
@@ -404,8 +415,17 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     String DeString = aesInstance.Decrypt(encrypted);
 ```
 
-<h3 id="rsa">10、RSA加解密</h3>
-#### a、调用RSAUtils:
+<h3 id="rsa">10、RSA加解密 加签验签</h3>
+
+>[感谢LeadroyaL的issue](https://github.com/momosecurity/rhizobia_J/issues/1)
+
+>[同前一节知识点2](#aes)
+
+### 10.1、加解密
+
+#### a、创建RSAUtils单例
+
+1) 如密钥在文件中:
 
 ```Java
     import com.immomo.rhizobia.rhizobia_J.crypto.RSAUtils;
@@ -420,6 +440,32 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     String pubKeyPath = "/tmp/pub.key";
     RSAUtils rsaInstance = RSAUtils.getInstance(priKeyPath, pubKeyPath);
 ```
+
+2) 由于文件头尾格式有多种，根据需要调用set方法修改头尾后生成公私钥
+   
+```
+   RSAUtils rsaInstance = RSAUtils.getInstance();
+   rsaInstance.setPemPriHead("-----BEGIN PRIVATE KEY-----\n");
+   rsaInstance.setPemPriEnd("-----END PRIVATE KEY-----");
+   rsaInstance.setPemPubHead("-----BEGIN PUBLIC KEY-----\n");
+   rsaInstance.setPemPubEnd("-----END PUBLIC KEY-----");
+   rsaInstance.setPrivateKey(rsaInstance.getPrivateKey(priKeyPath));
+   rsaInstance.setPublicKey(rsaInstance.getPublicKey(pubKeyPath));
+```
+
+3) 如果已有公私钥，也可直接用已有密钥生成单例
+
+```
+    //如下为生成公私钥的例子，用户可任意选用其他方法生成公私钥
+    KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
+    keyPairGenerator.initialize(512);
+    KeyPair keyPair = keyPairGenerator.generateKeyPair();
+    PublicKey rsaPublicKey = (PublicKey) keyPair.getPublic();
+    PrivateKey rsaPrivateKey = (PrivateKey) keyPair.getPrivate();
+    
+    //生成单例
+    RSAUtils rsaInstance = RSAUtils.getInstance(rsaPrivateKey, rsaPublicKey);
+ ```
 
 #### b、加密
 
@@ -437,4 +483,28 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     //同样，如果加密内容用base64编码或转换成Hex，解密时需另做处理
     byte[] encrypted = new BASE64Decoder().decodeBuffer(encryptRet);
     String plaintext = rsaInstance.decrypt(ciphertext);
+```
+
+### 10.2、加签验签
+
+#### a、加签
+
+```Java
+    //原文
+    String plaintext = "123";
+
+    //有时需要生成摘要，可自己选用摘要的算法
+    plaintext = DigestUtils.sha256Hex(plaintext);
+
+    byte[] sigintext = rsaInstance.sign(plaintext);
+    //与aes一样返回是byte流，所以如果需要base64编码或转换成Hex，需另做处理
+    String signtRet = new BASE64Encoder().encode(sigintext);
+```
+
+#### b、验签
+
+```Java
+    //同样，如果加密内容用base64编码或转换成Hex，解密时需另做处理
+    byte[] verified = new BASE64Decoder().decodeBuffer(signtRet);
+    boolean ifPass = rsaInstance.verify(verified, plaintext);
 ```
