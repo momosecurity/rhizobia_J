@@ -21,6 +21,7 @@
     │   │                   │   └── WhiteChecker.java
     │   │                   ├── crypto
     │   │                   │   ├── AESUtils.java
+    │   │                   │   ├── ECDSAUtils.java
     │   │                   │   └── RSAUtils.java
     │   │                   ├── csrf
     │   │                   │   └── CSRFTokenUtils.java
@@ -75,8 +76,10 @@
                             ├── AESUtilsTest.java
                             ├── CSRFTokenUtilsTest.java
                             ├── DB2SanitiserTest.java
+                            ├── ECDSAUtilsTest.java
                             ├── MysqlSanitiserTest.java
                             ├── OracleSanitiserTest.java
+                            ├── RSAUtilsTest.java
                             ├── SSRFWhiteCheckerTest.java
                             ├── SafeClass.java
                             ├── SecureObjectInputStreamTest.java
@@ -99,6 +102,7 @@
 * [8、xxe防护](#xxe)
 * [9、AES加解密](#aes)
 * [10、RSA加解密](#rsa)
+* [11、ECDSA 加签验签](#ecdsa)
 
 <h3 id="importjsl">1、引用java security library</h3>
 
@@ -417,9 +421,25 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
 
 <h3 id="rsa">10、RSA加解密 加签验签</h3>
 
+```
+知识点1：RSA加解密时，明文是有长度限制的，明文字符串限制长度 = 密钥长度(byte) - padding占用大小(byte)
+         padding大小如下：
+              RSA/ECB/PKCS1Padding or RSA             :   11
+              RSA/ECB/OAEPWithSHA-1AndMGF1Padding     :   42
+              RSA/ECB/OAEPWithSHA-256AndMGF1Padding   :   66
+    
+         例如：RSA密钥长度为1024(bit)/8 = 128(byte)，keyPairGenerator.initialize(1024)，
+              在RSA/ECB/OAEPWithSHA-1AndMGF1Padding模式下，
+              被加密的明文字符串长度不能超过 128-42 = 86
+              
+知识点2：同前一节aes的知识点2
+
+知识点3：源码所用的signature类中，已经封装了摘要算法，所以可以不必再生成摘要，当然自已多生成摘要也没有问题
+
+```
+
 >[感谢LeadroyaL的issue](https://github.com/momosecurity/rhizobia_J/issues/1)
 
->[同前一节知识点2](#aes)
 
 ### 10.1、加解密
 
@@ -430,7 +450,6 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
 ```Java
     import com.immomo.rhizobia.rhizobia_J.crypto.RSAUtils;
     
-    RSAUtils rsaInstance = RSAUtils.getInstance(priKeyPath, pubKeyPath);
     /**
     参数说明：目前证书支持 PEM 格式
         priKeyPath:  openssl生成的私钥地址
@@ -472,7 +491,10 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
 ```Java
     String plaintext = "123";
 
+    //如知识点1，如果明文长度超过最大长度，可以用rsaInstance.encryptWithouLimit
+    //或者自行将明文字符串拆分成对应的限制长度的块
     byte[] ciphertext = rsaInstance.encrypt(plaintext);
+    
     //与aes一样返回是byte流，所以如果需要base64编码或转换成Hex，需另做处理
     String encryptRet = new BASE64Encoder().encode(ciphertext);
 ```
@@ -482,19 +504,18 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
 ```Java
     //同样，如果加密内容用base64编码或转换成Hex，解密时需另做处理
     byte[] encrypted = new BASE64Decoder().decodeBuffer(encryptRet);
+
+    //如知识点1，如果使用了encryptWithouLimit加密，对应使用rsaInstancedecryptWithoutLimit进行解密
     String plaintext = rsaInstance.decrypt(ciphertext);
 ```
 
-### 10.2、加签验签
+### 10.2、加签验签(更推荐使用ECDSA来实现加签验签，[参考](https://blog.cloudflare.com/ecdsa-the-digital-signature-algorithm-of-a-better-internet/))
 
 #### a、加签
 
 ```Java
     //原文
     String plaintext = "123";
-
-    //有时需要生成摘要，可自己选用摘要的算法
-    plaintext = DigestUtils.sha256Hex(plaintext);
 
     byte[] sigintext = rsaInstance.sign(plaintext);
     //与aes一样返回是byte流，所以如果需要base64编码或转换成Hex，需另做处理
@@ -508,3 +529,39 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     byte[] verified = new BASE64Decoder().decodeBuffer(signtRet);
     boolean ifPass = rsaInstance.verify(verified, plaintext);
 ```
+
+<h3 id="ecdsa">11、ECDSA 加签验签</h3>
+
+#### a、创建ECDSAUtils单例
+
+与前面一节RSA类似，也有三种获取单例的方法
+
+```Java
+    import com.immomo.rhizobia.rhizobia_J.crypto.ECDSAUtils;
+
+    String priKeyPath = "/tmp/ECDSAPrivateKey.key";
+    String pubKeyPath = "/tmp/ECDSAPublicKey.key";
+    ECDSAUtils ecInstance = ECDSAUtils.getInstance(priKeyPath, pubKeyPath);
+
+    //ECDSAUtils.getInstance()或ECDSAUtils.getInstance(ecPrivateKey, ecPublicKey)参照前面RSA章节
+```
+
+#### b、加签
+
+```Java
+    String plaintext = "123";
+
+    byte[] sigintext = ecInstance.sign(plaintext);
+    //与aes一样返回是byte流，所以如果需要base64编码或转换成Hex，需另做处理
+    String signtRet = new BASE64Encoder().encode(sigintext);
+
+```
+
+#### c、验签
+```Java
+    //同样，如果加密内容用base64编码或转换成Hex，解密时需另做处理
+    byte[] verified = new BASE64Decoder().decodeBuffer(signtRet);
+    boolean ifPass = ecInstance.verify(verified, plaintext);
+```
+
+
