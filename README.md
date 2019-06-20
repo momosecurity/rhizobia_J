@@ -1,3 +1,9 @@
+### 关于我们
+Website：https://security.immomo.com <br>
+WeChat:<br> 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<img src="https://momo-mmsrc.oss-cn-hangzhou.aliyuncs.com/img-1c96a083-7392-3b72-8aec-bad201a6abab.jpeg" width="200" hegiht="200" align=center /><br>
+&nbsp;&nbsp;&nbsp;&nbsp;[成员介绍](https://dwz.cn/yIyclLxZ)
+
 ### 项目简介
 本项目包含两部分：
 [java安全编码规范](https://github.com/momosecurity/rhizobia_J/wiki/JAVA%E5%AE%89%E5%85%A8%E7%BC%96%E7%A0%81%E8%A7%84%E8%8C%83
@@ -505,7 +511,7 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     //同样，如果加密内容用base64编码或转换成Hex，解密时需另做处理
     byte[] encrypted = new BASE64Decoder().decodeBuffer(encryptRet);
 
-    //如知识点1，如果使用了encryptWithouLimit加密，对应使用rsaInstancedecryptWithoutLimit进行解密
+    //如知识点1，如果使用了encryptWithouLimit加密，对应使用rsaInstance.decryptWithoutLimit进行解密
     String plaintext = rsaInstance.decrypt(ciphertext);
 ```
 
@@ -563,5 +569,6 @@ __使用order by、group by等需要转换列名时，需使用带boolean参数_
     byte[] verified = new BASE64Decoder().decodeBuffer(signtRet);
     boolean ifPass = ecInstance.verify(verified, plaintext);
 ```
+
 
 
